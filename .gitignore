@@ -1,0 +1,41 @@
+# Existing entries
+/docker/
+/logs/
+/json_gt/
+/runs/
+__pycache__/
+/utils/wandb_logging/__pycache__
+selecting_best_model_robustly.ipynb
+
+# New entries
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# User configuration files
+/.local/
+/.nv/
+/.triton/
+/.devcontainer/
+/.cache/
+/.config/
+/.conda/
+/.vscode/
+
+# Data and logs
+/logs/
+/json_gt/
+runs
+
+# Temporary and runtime files
+*.log
+*.tmp
+
+# Pretrained weights
+/pretrained/
+
+# Ignore virtual environments
+venv/
+ENV/
+env/
+.venv/

@@ -1,0 +1,15 @@
+# train_rgb: /mnt/workspace/users/vsrikar/DeformableDetr/data/camel/train/trainRGB.txt 
+# val_rgb: /mnt/workspace/users/vsrikar/DeformableDetr/data/camel/val/valRGB.txt  
+# train_ir: /mnt/workspace/users/vsrikar/DeformableDetr/data/IR_camel/train/trainIR.txt  
+# val_ir: /mnt/workspace/users/vsrikar/DeformableDetr/data/IR_camel/val/valIR.txt  
+train_rgb: /mnt/workspace/users/vsrikar/DeformableDetr/data/camel/train/train_sequenceWise_RGB.txt
+val_rgb: /mnt/workspace/users/vsrikar/DeformableDetr/data/camel/val/val_sequenceWise_RGB.txt
+train_ir: /mnt/workspace/users/vsrikar/DeformableDetr/data/IR_camel/train/train_sequence_wise_IR.txt
+val_ir: /mnt/workspace/users/vsrikar/DeformableDetr/data/IR_camel/val/val_sequence_wise_IR.txt
+
+
+# number of classes
+nc: 5
+
+# class names
+names: ['N/A','person', 'bike', 'car', 'dog']

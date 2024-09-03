@@ -1,0 +1,4 @@
+train_rgb: /mnt/workspace/datasets/kaist-cvpr15/kaist_video_sanitized_lframe1_stride1_whole_nc1/train_vis_kaist_video.txt
+train_ir: /mnt/workspace/datasets/kaist-cvpr15/kaist_video_sanitized_lframe1_stride1_whole_nc1/train_lwir_kaist_video.txt
+nc: 1
+names: ['person']
