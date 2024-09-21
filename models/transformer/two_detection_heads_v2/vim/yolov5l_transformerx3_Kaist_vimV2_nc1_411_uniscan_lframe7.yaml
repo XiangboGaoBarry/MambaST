@@ -33,7 +33,7 @@ backbone:
     
     ######### TransformerBlock Two #############
    # transformer fusion
-    [[4,9], 1, VIMAttentionV2, [256, 80, 80, 8, 7, 4, False, False, False]],   # 10-P3/8 #note that its 256xnum of frames
+    [[4,9], 1, VIMAttentionV2, [256, 80, 80, 8, 7, 4, True, True, False]],   # 10-P3/8 #note that its 256xnum of frames
     [[4,10], 1, Add2, [256,0]],    # 11-P3/8 stream one x+trans[0]
     [[9,10], 1, Add2, [256,1]],    # 12-P3/8 stream two x+trans[1]
 
@@ -46,7 +46,7 @@ backbone:
     [12, 1, Conv, [512, 3, 2 ]],   # 15-P4/16
     [-1, 9, C3, [512]],   # 16-P4/16
    # transformer fusion
-    [[14,16], 1, VIMAttentionV2, [512, 40, 40, 8, 7, 1, False, False, False]],   # 17-P3/8 #
+    [[14,16], 1, VIMAttentionV2, [512, 40, 40, 8, 7, 1, True, True, False]],   # 17-P3/8 #
     [[14,17], 1, Add2, [512,0]],    # 18-P3/8 stream one x+trans[0]
     [[16,17], 1, Add2, [512,1]],    # 19-P3/8 stream two x+trans[1]
 
@@ -61,7 +61,7 @@ backbone:
     [-1, 1, SPP, [1024, [5, 9, 13]]],   # 24-P5/32
     [-1, 3, C3, [1024, False]],   # 25-P5/32
     # transformer fusion
-    [[22,25], 1, VIMAttentionV2, [1024, 20, 20, 8, 7, 1, False, False, False]],    # 26-P5/32
+    [[22,25], 1, VIMAttentionV2, [1024, 20, 20, 8, 7, 1, True, True, False]],    # 26-P5/32
     [[22,26], 1, Add2, [1024,0]],    # 27-P5/32 stream one x+trans[0]
     [[25,26], 1, Add2, [1024,1]],    # 28-P5/32 stream two x+trans[1]
 
