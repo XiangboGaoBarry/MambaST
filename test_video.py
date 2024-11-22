@@ -163,18 +163,12 @@ def test(data,
         task = opt.task if opt.task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
         val_path_rgb = data['val_rgb']
         val_path_ir = data['val_ir']
-        if opt.use_tadaconv:
-            dataloader = create_dataloader_rgb_ir(val_path_rgb, val_path_ir, imgsz, batch_size, gs, opt,
-                                                opt.temporal_stride, opt.lframe, opt.gframe, opt.regex_search,
-                                                pad=0.5,# rect=True, 
-                                                prefix=colorstr(f'{task}: '), supervision_signal=opt.detection_head,
-                                                dataset_used=opt.dataset_used, is_training=False, use_tadaconv=True, sanitized=opt.sanitized)[0]
-        else:
-            dataloader = create_dataloader_rgb_ir(val_path_rgb, val_path_ir, imgsz, batch_size, gs, opt,
-                                                        opt.temporal_stride, opt.lframe, opt.gframe, opt.regex_search,
-                                                        pad=0.5, # rect=True, 
-                                                        prefix=colorstr(f'{task}: '), supervision_signal=opt.detection_head,
-                                                        dataset_used=opt.dataset_used, is_training=False, use_tadaconv=False, sanitized=opt.sanitized)[0]
+        
+        dataloader = create_dataloader_rgb_ir(val_path_rgb, val_path_ir, imgsz, batch_size, gs, opt,
+                                            opt.temporal_stride, opt.lframe, opt.gframe, opt.regex_search,
+                                            pad=0.5,# rect=True, 
+                                            prefix=colorstr(f'{task}: '),
+                                            dataset_used=opt.dataset_used, is_training=False, use_tadaconv=True, sanitized=opt.sanitized)[0]
 
 
     seen = 0
@@ -279,32 +273,15 @@ def test(data,
             # import pdb; pdb.set_trace()
             t0 += time_synchronized() - t
             
-            if opt.detection_head == 'fullframes':
-                targets_split = []
-                for frame in range(opt.lframe):
-                    targets_frame = targets[targets[:, 1] == frame]
-                    targets_frame = torch.cat([targets_frame[:, 0:1], targets_frame[:, 2:]], dim=1)
-                    targets_split.append(targets_frame)
-                targets = targets_split[0]
-                out = out[:, 0]
 
             # Compute loss
             if compute_loss:
                 try:
-                    
-                    if opt.detection_head == 'lastframe' or opt.detection_head == 'midframe':
-                        if opt.detector_weights == 'both':
-                            loss += compute_loss[0]([x.float() for x in train_out_rgb], targets_rgb)[1][:3]  # box, obj, cls
-                            loss += compute_loss[1]([x.float() for x in train_out_thermal], targets_ir)[1][:3]  # box, obj, cls
-                        else:
-                            loss += compute_loss([x.float() for x in train_out], targets_rgb)[1][:3]  # box, obj, cls
-                    elif opt.detection_head == 'fullframes':
-                        loss_curr = 0
-                        for frame in range(opt.lframe):
-                            loss_curr += compute_loss([x.float()[:, frame] for x in train_out], targets_split[frame].to(device))[1][:3]  # loss scaled by batch_size
-                        loss += loss_curr / opt.lframe
+                    if opt.detector_weights == 'both':
+                        loss += compute_loss[0]([x.float() for x in train_out_rgb], targets_rgb)[1][:3]  # box, obj, cls
+                        loss += compute_loss[1]([x.float() for x in train_out_thermal], targets_ir)[1][:3]  # box, obj, cls
                     else:
-                        raise Exception(f"Detection head: {opt.detection_head} is not supported.")    
+                        loss += compute_loss([x.float() for x in train_out], targets_rgb)[1][:3]  # box, obj, cls
                 except Exception as error:
                     # handle the exception
                     print("An exception occurred:", error)
@@ -320,71 +297,6 @@ def test(data,
             out = non_max_suppression(out, conf_thres, iou_thres, labels=lb, multi_label=True, agnostic=single_cls, max_det=1000)
             
             
-            #########################
-            # Feature Visualization #
-            #########################
-            if opt.feature_visualization:
-                feature = feature_rgb if opt.detector_weights == 'both' else feature
-                # for rgb_fea_ori in feature_rgb[:1]:
-                    
-                    # for frame in range(rgb_fea_ori.shape[2]):
-                # rgb_fea_ori = torch.cat([feature_rgb[0], 
-                #                          nn.functional.interpolate(feature_rgb[1], size=(feature_rgb[0].shape[3], feature_rgb[0].shape[4]), mode='bilinear', align_corners=False),
-                #                          nn.functional.interpolate(feature_rgb[2], size=(feature_rgb[0].shape[3], feature_rgb[0].shape[4]), mode='bilinear', align_corners=False)], dim=1)
-                frame = 0
-                print(f"visualizing batch {batch_i}, frame {frame}:", frame)
-                N = 2
-                # rgb_fea = rgb_fea_ori[:,:,frame].cpu().numpy()
-                # B,C,H,W = rgb_fea.shape
-                # import pdb; pdb.set_trace()
-                rgb_fea = np.concatenate([feature[0][:,:,frame].cpu().numpy(),
-                                        nn.functional.interpolate(feature[1][:,:,frame], size=(feature[0].shape[3], feature[0].shape[4]), mode='bilinear', align_corners=False).cpu().numpy(),
-                                        nn.functional.interpolate(feature[2][:,:,frame], size=(feature[0].shape[3], feature[0].shape[4]), mode='bilinear', align_corners=False).cpu().numpy()], axis=1)
-                # rgb_fea = rgb_fea[:, :, 10:70]
-                H_, W_ = 640, 640
-                B,C,H,W = rgb_fea.shape
-                pca = PCA(n_components=3)
-                reduced_features = pca.fit_transform(rgb_fea.transpose(0,2,3,1).reshape(B * H * W, rgb_fea.shape[1]))
-                norm_features = (reduced_features - reduced_features.min()) / (reduced_features.max() - reduced_features.min())
-                scale_features = sklearn.preprocessing.minmax_scale(norm_features)
-                # norm_features = sklearn.preprocessing.minmax_scale(reduced_features)
-                # for alpha in [1,2,3, 5, 8, 10]:
-                #     exp_sclae_features = np.exp(alpha * scale_features)
-                #     # norm_features = sklearn.preprocessing.minmax_scale(norm_features)
-                #     exp_sclae_features = sklearn.preprocessing.minmax_scale(exp_sclae_features)
-                #     exp_sclae_features = (exp_sclae_features.reshape(B, H, W, 3) * 255.).astype(np.uint8)
-                #     exp_sclae_features = nn.functional.interpolate(torch.tensor(exp_sclae_features).permute(0,3,1,2), size=(H_, W_), mode='bilinear', align_corners=False).permute(0,2,3,1).cpu().numpy()
-                #     for b in range(B):
-                #         os.makedirs(f'logs/det_res/{opt.name}', exist_ok=True)
-                #         aaa = 1
-                #         imgd = cv2.addWeighted((img[b,[2,1,0],frame].permute(1,2,0).cpu().numpy()*255).astype(np.uint8), aaa, cv2.applyColorMap(exp_sclae_features[b,:,:,0], cv2.COLORMAP_JET), 1-aaa, 0)
-                #         imgd = draw_boxes(imgd, out[b])
-                #         cv2.imwrite(f'logs/feat_visualization/{opt.name}/feature_batch_{batch_i}_idx_{b}_frame_{frame}_dim{H}_scale_alpha{alpha}_R.png', imgd)
-                #         imgd = cv2.addWeighted((img[b,[2,1,0],frame].permute(1,2,0).cpu().numpy()*255).astype(np.uint8), aaa, cv2.applyColorMap(exp_sclae_features[b,:,:,1], cv2.COLORMAP_JET), 1-aaa, 0)
-                #         imgd = draw_boxes(imgd, out[b])
-                #         cv2.imwrite(f'logs/feat_visualization/{opt.name}/feature_batch_{batch_i}_idx_{b}_frame_{frame}_dim{H}_scale_alpha{alpha}_B.png', imgd)
-                #         imgd = cv2.addWeighted((img[b,[2,1,0],frame].permute(1,2,0).cpu().numpy()*255).astype(np.uint8), aaa, cv2.applyColorMap(exp_sclae_features[b,:,:,2], cv2.COLORMAP_JET), 1-aaa, 0)
-                #         imgd = draw_boxes(imgd, out[b])
-                #         cv2.imwrite(f'logs/feat_visualization/{opt.name}/feature_batch_{batch_i}_idx_{b}_frame_{frame}_dim{H}_scale_alpha{alpha}_G.png', imgd)
-                #         imgd = cv2.addWeighted((img[b,[5,4,3],frame].permute(1,2,0).cpu().numpy()*255).astype(np.uint8), aaa, cv2.applyColorMap(exp_sclae_features[b,:,:,0], cv2.COLORMAP_JET), 1-aaa, 0)
-                #         imgd = draw_boxes(imgd, out[b])
-                #         cv2.imwrite(f'logs/feat_visualization/{opt.name}/feature_batch_{batch_i}_idx_{b}_frame_{frame}_dim{H}_scale_alpha{alpha}_R_IR.png', imgd)
-                #         imgd = cv2.addWeighted((img[b,[5,4,3],frame].permute(1,2,0).cpu().numpy()*255).astype(np.uint8), aaa, cv2.applyColorMap(exp_sclae_features[b,:,:,1], cv2.COLORMAP_JET), 1-aaa, 0)
-                #         imgd = draw_boxes(imgd, out[b])
-                #         cv2.imwrite(f'logs/feat_visualization/{opt.name}/feature_batch_{batch_i}_idx_{b}_frame_{frame}_dim{H}_scale_alpha{alpha}_B_IR.png', imgd)
-                #         imgd = cv2.addWeighted((img[b,[5,4,3],frame].permute(1,2,0).cpu().numpy()*255).astype(np.uint8), aaa, cv2.applyColorMap(exp_sclae_features[b,:,:,2], cv2.COLORMAP_JET), 1-aaa, 0)
-                #         imgd = draw_boxes(imgd, out[b])
-                #         cv2.imwrite(f'logs/feat_visualization/{opt.name}/feature_batch_{batch_i}_idx_{b}_frame_{frame}_dim{H}_scale_alpha{alpha}_G_IR.png', imgd)
-
-                
-
-                for b in range(B):
-                    for thre in [0.5, 0.2, 0.1, 0.05, 0.02, 0.01]:
-                        os.makedirs(f'logs/det_res/{opt.name}', exist_ok=True)
-                        imgd = draw_boxes((img[b,[2,1,0],frame].permute(1,2,0).cpu().numpy()*255).astype(np.uint8), out[b], thre=thre)
-                        cv2.imwrite(f'logs/det_res/{opt.name}/feature_batch_{batch_i}_idx_{b}_frame_{frame}_dim{H}_V_thre{thre}.png', imgd)
-                        imgd = draw_boxes((img[b,[5,4,3],frame].permute(1,2,0).cpu().numpy()*255).astype(np.uint8), out[b], thre=thre)
-                        cv2.imwrite(f'logs/det_res/{opt.name}/feature_batch_{batch_i}_idx_{b}_frame_{frame}_dim{H}_I_thre{thre}.png', imgd)
             # # import pdb; pdb.set_trace()
             # for i in range(len(out)):
             #     image_data = img[i, :3, 0]
@@ -766,13 +678,6 @@ if __name__ == '__main__':
     print(opt)
     print(opt.data)
     check_requirements()
-
-    # Ensure yolov_modules_to_select.yaml and parser variables are equal
-    with open('./models/yolov_modules_to_select.yaml') as f:
-        select_modules = yaml.safe_load(f)  # data dict
-    assert opt.use_tadaconv == select_modules['use_tadaconv'], "Make sure *****use_tadaconv***** is set to either BOTH True or BOTH False in the input arguments and YAML file" 
-    # assert opt.detection_head == select_modules['detection_head'], "Make sure *****detection_head***** is set same 'head' in the input arguments and YAML file"
-    # assert opt.fusion_strategy == select_modules['fusion_strategy'], "Make sure *****fusion_strategy***** is set consistently in the input arguments and YAML file" 
 
 
     if opt.task in ('train', 'val', 'test'):  # run normally
