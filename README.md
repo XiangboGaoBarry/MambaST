@@ -2,7 +2,9 @@
 
 
 # MambaST
-MambaST: A Plug-and-Play Cross-Spectral Spatial-Temporal Fuser for Efficient Pedestrian Detection
+Xiangbo Gao, Asiegbu Miracle Kanu-Asiegbu, Xiaoxiao Du
+
+[MambaST: A Plug-and-Play Cross-Spectral Spatial-Temporal Fuser for Efficient Pedestrian Detection](https://arxiv.org/abs/2408.01037)
 ## Usage
 
 1. **Build Docker Image**
